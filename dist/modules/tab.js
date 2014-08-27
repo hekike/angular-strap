@@ -15,7 +15,7 @@ angular.module('mgcrea.ngStrap.tab', []).run([
   var defaults = this.defaults = {
       animation: 'am-fade',
       template: 'tab/tab.tpl.html',
-      'base-class': 'tabs'
+      baseClass: 'tabs'
     };
   this.$get = function () {
     return { defaults: defaults };
@@ -40,12 +40,13 @@ angular.module('mgcrea.ngStrap.tab', []).run([
           if (angular.isDefined(attr[key]))
             options[key] = attr[key];
         });
+        options.baseClass = attr.baseClass || defaults.baseClass;
         // Require scope as an object
         attr.bsTabs && scope.$watch(attr.bsTabs, function (newValue, oldValue) {
           scope.panes = newValue;
         }, true);
         // Add base class
-        element.addClass(defaults['base-class']);
+        element.addClass(options.baseClass);
         // Support animations
         if (options.animation) {
           element.addClass(options.animation);
