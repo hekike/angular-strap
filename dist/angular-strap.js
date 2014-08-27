@@ -1,6 +1,6 @@
 /**
  * angular-strap
- * @version v2.0.5 - 2014-08-07
+ * @version v2.0.5 - 2014-08-27
  * @link http://mgcrea.github.io/angular-strap
  * @author Olivier Louvignes (olivier@mg-crea.com)
  * @license MIT License, http://www.opensource.org/licenses/MIT
@@ -159,7 +159,7 @@ angular.module('mgcrea.ngStrap.affix', [
           }
         }
         function getScrollTop() {
-          return targetEl[0] === $window ? $window.pageYOffset : targetEl[0] === $window;
+          return targetEl[0] === $window ? $window.pageYOffset : targetEl[0].scrollTop;
         }
         function getScrollHeight() {
           return targetEl[0] === $window ? $window.document.body.scrollHeight : targetEl[0].scrollHeight;
@@ -194,6 +194,7 @@ angular.module('mgcrea.ngStrap.affix', [
         });
         var affix = $affix(element, options);
         scope.$on('$destroy', function () {
+          affix && affix.destroy();
           options = null;
           affix = null;
         });
@@ -210,117 +211,6 @@ angular.module('mgcrea.ngStrap.affix', [
     ]
   };
 });
-
-// Source: alert.js
-// @BUG: following snippet won't compile correctly
-// @TODO: submit issue to core
-// '<span ng-if="title"><strong ng-bind="title"></strong>&nbsp;</span><span ng-bind-html="content"></span>' +
-angular.module('mgcrea.ngStrap.alert', ['mgcrea.ngStrap.modal']).provider('$alert', function () {
-  var defaults = this.defaults = {
-      animation: 'am-fade',
-      prefixClass: 'alert',
-      placement: null,
-      template: 'alert/alert.tpl.html',
-      container: false,
-      element: null,
-      backdrop: false,
-      keyboard: true,
-      show: true,
-      duration: false,
-      type: false,
-      dismissable: true
-    };
-  this.$get = [
-    '$modal',
-    '$timeout',
-    function ($modal, $timeout) {
-      function AlertFactory(config) {
-        var $alert = {};
-        // Common vars
-        var options = angular.extend({}, defaults, config);
-        $alert = $modal(options);
-        // Support scope as string options [/*title, content, */ type, dismissable]
-        $alert.$scope.dismissable = !!options.dismissable;
-        if (options.type) {
-          $alert.$scope.type = options.type;
-        }
-        // Support auto-close duration
-        var show = $alert.show;
-        if (options.duration) {
-          $alert.show = function () {
-            show();
-            $timeout(function () {
-              $alert.hide();
-            }, options.duration * 1000);
-          };
-        }
-        return $alert;
-      }
-      return AlertFactory;
-    }
-  ];
-}).directive('bsAlert', [
-  '$window',
-  '$location',
-  '$sce',
-  '$alert',
-  function ($window, $location, $sce, $alert) {
-    var requestAnimationFrame = $window.requestAnimationFrame || $window.setTimeout;
-    return {
-      restrict: 'EAC',
-      scope: true,
-      link: function postLink(scope, element, attr, transclusion) {
-        // Directive options
-        var options = {
-            scope: scope,
-            element: element,
-            show: false
-          };
-        angular.forEach([
-          'template',
-          'placement',
-          'keyboard',
-          'html',
-          'container',
-          'animation',
-          'duration',
-          'dismissable'
-        ], function (key) {
-          if (angular.isDefined(attr[key]))
-            options[key] = attr[key];
-        });
-        // Support scope as data-attrs
-        angular.forEach([
-          'title',
-          'content',
-          'type'
-        ], function (key) {
-          attr[key] && attr.$observe(key, function (newValue, oldValue) {
-            scope[key] = $sce.trustAsHtml(newValue);
-          });
-        });
-        // Support scope as an object
-        attr.bsAlert && scope.$watch(attr.bsAlert, function (newValue, oldValue) {
-          if (angular.isObject(newValue)) {
-            angular.extend(scope, newValue);
-          } else {
-            scope.content = newValue;
-          }
-        }, true);
-        // Initialize alert
-        var alert = $alert(options);
-        // Trigger
-        element.on(attr.trigger || 'click', alert.toggle);
-        // Garbage collection
-        scope.$on('$destroy', function () {
-          alert.destroy();
-          options = null;
-          alert = null;
-        });
-      }
-    };
-  }
-]);
 
 // Source: aside.js
 angular.module('mgcrea.ngStrap.aside', ['mgcrea.ngStrap.modal']).provider('$aside', function () {
@@ -402,7 +292,8 @@ angular.module('mgcrea.ngStrap.aside', ['mgcrea.ngStrap.modal']).provider('$asid
         element.on(attr.trigger || 'click', aside.toggle);
         // Garbage collection
         scope.$on('$destroy', function () {
-          aside.destroy();
+          if (aside)
+            aside.destroy();
           options = null;
           aside = null;
         });
@@ -829,7 +720,7 @@ angular.module('mgcrea.ngStrap.datepicker', [
           if (!datepicker || !angular.isDefined(newValue))
             return;
           if (angular.isString(newValue))
-            newValue = newValue.match(',?(datepicker),?');
+            newValue = !!newValue.match(',?(datepicker),?');
           newValue === true ? datepicker.show() : datepicker.hide();
         });
         // Set expected iOS format
@@ -1014,6 +905,7 @@ angular.module('mgcrea.ngStrap.datepicker', [
               build: function () {
                 var firstDayOfMonth = new Date(viewDate.year, viewDate.month, 1), firstDayOfMonthOffset = firstDayOfMonth.getTimezoneOffset();
                 var firstDate = new Date(+firstDayOfMonth - mod(firstDayOfMonth.getDay() - options.startWeek, 7) * 86400000), firstDateOffset = firstDate.getTimezoneOffset();
+                var today = new Date().toDateString();
                 // Handle daylight time switch
                 if (firstDateOffset !== firstDayOfMonthOffset)
                   firstDate = new Date(+firstDate + (firstDateOffset - firstDayOfMonthOffset) * 60000);
@@ -1023,6 +915,7 @@ angular.module('mgcrea.ngStrap.datepicker', [
                   day = new Date(firstDate.getFullYear(), firstDate.getMonth(), firstDate.getDate() + i);
                   days.push({
                     date: day,
+                    isToday: day.toDateString() === today,
                     label: dateFilter(day, this.format),
                     selected: picker.$date && this.isSelected(day),
                     muted: day.getMonth() !== viewDate.month,
@@ -1313,13 +1206,134 @@ angular.module('mgcrea.ngStrap.dropdown', ['mgcrea.ngStrap.tooltip']).provider('
         attr.bsDropdown && scope.$watch(attr.bsDropdown, function (newValue, oldValue) {
           scope.content = newValue;
         }, true);
+        // Visibility binding support
+        attr.bsShow && scope.$watch(attr.bsShow, function (newValue, oldValue) {
+          if (!dropdown || !angular.isDefined(newValue))
+            return;
+          if (angular.isString(newValue))
+            newValue = !!newValue.match(',?(dropdown),?');
+          newValue === true ? dropdown.show() : dropdown.hide();
+        });
         // Initialize dropdown
         var dropdown = $dropdown(element, options);
         // Garbage collection
         scope.$on('$destroy', function () {
-          dropdown.destroy();
+          if (dropdown)
+            dropdown.destroy();
           options = null;
           dropdown = null;
+        });
+      }
+    };
+  }
+]);
+
+// Source: alert.js
+// @BUG: following snippet won't compile correctly
+// @TODO: submit issue to core
+// '<span ng-if="title"><strong ng-bind="title"></strong>&nbsp;</span><span ng-bind-html="content"></span>' +
+angular.module('mgcrea.ngStrap.alert', ['mgcrea.ngStrap.modal']).provider('$alert', function () {
+  var defaults = this.defaults = {
+      animation: 'am-fade',
+      prefixClass: 'alert',
+      placement: null,
+      template: 'alert/alert.tpl.html',
+      container: false,
+      element: null,
+      backdrop: false,
+      keyboard: true,
+      show: true,
+      duration: false,
+      type: false,
+      dismissable: true
+    };
+  this.$get = [
+    '$modal',
+    '$timeout',
+    function ($modal, $timeout) {
+      function AlertFactory(config) {
+        var $alert = {};
+        // Common vars
+        var options = angular.extend({}, defaults, config);
+        $alert = $modal(options);
+        // Support scope as string options [/*title, content, */ type, dismissable]
+        $alert.$scope.dismissable = !!options.dismissable;
+        if (options.type) {
+          $alert.$scope.type = options.type;
+        }
+        // Support auto-close duration
+        var show = $alert.show;
+        if (options.duration) {
+          $alert.show = function () {
+            show();
+            $timeout(function () {
+              $alert.hide();
+            }, options.duration * 1000);
+          };
+        }
+        return $alert;
+      }
+      return AlertFactory;
+    }
+  ];
+}).directive('bsAlert', [
+  '$window',
+  '$location',
+  '$sce',
+  '$alert',
+  function ($window, $location, $sce, $alert) {
+    var requestAnimationFrame = $window.requestAnimationFrame || $window.setTimeout;
+    return {
+      restrict: 'EAC',
+      scope: true,
+      link: function postLink(scope, element, attr, transclusion) {
+        // Directive options
+        var options = {
+            scope: scope,
+            element: element,
+            show: false
+          };
+        angular.forEach([
+          'template',
+          'placement',
+          'keyboard',
+          'html',
+          'container',
+          'animation',
+          'duration',
+          'dismissable'
+        ], function (key) {
+          if (angular.isDefined(attr[key]))
+            options[key] = attr[key];
+        });
+        // Support scope as data-attrs
+        angular.forEach([
+          'title',
+          'content',
+          'type'
+        ], function (key) {
+          attr[key] && attr.$observe(key, function (newValue, oldValue) {
+            scope[key] = $sce.trustAsHtml(newValue);
+          });
+        });
+        // Support scope as an object
+        attr.bsAlert && scope.$watch(attr.bsAlert, function (newValue, oldValue) {
+          if (angular.isObject(newValue)) {
+            angular.extend(scope, newValue);
+          } else {
+            scope.content = newValue;
+          }
+        }, true);
+        // Initialize alert
+        var alert = $alert(options);
+        // Trigger
+        element.on(attr.trigger || 'click', alert.toggle);
+        // Garbage collection
+        scope.$on('$destroy', function () {
+          if (alert)
+            alert.destroy();
+          options = null;
+          alert = null;
         });
       }
     };
@@ -1331,6 +1345,8 @@ angular.module('mgcrea.ngStrap.helpers.dateParser', []).provider('$dateParser', 
   '$localeProvider',
   function ($localeProvider) {
     var proto = Date.prototype;
+    function noop() {
+    }
     function isNumeric(n) {
       return !isNaN(parseFloat(n)) && isFinite(n);
     }
@@ -1378,6 +1394,8 @@ angular.module('mgcrea.ngStrap.helpers.dateParser', []).provider('$dateParser', 
               'H': proto.setHours,
               'hh': proto.setHours,
               'h': proto.setHours,
+              'EEEE': noop,
+              'EEE': noop,
               'dd': proto.setDate,
               'd': proto.setDate,
               'a': function (value) {
@@ -1437,12 +1455,15 @@ angular.module('mgcrea.ngStrap.helpers.dateParser', []).provider('$dateParser', 
               if (format.split(keys[i]).length > 1) {
                 var index = clonedFormat.search(keys[i]);
                 format = format.split(keys[i]).join('');
-                if (setFnMap[keys[i]])
+                if (setFnMap[keys[i]]) {
                   map[index] = setFnMap[keys[i]];
+                }
               }
             }
             // Sort result map
             angular.forEach(map, function (v) {
+              // conditional required since angular.forEach broke around v1.2.21
+              // related pr: https://github.com/angular/angular.js/pull/8525
               if (v)
                 sortedMap.push(v);
             });
@@ -1942,7 +1963,10 @@ angular.module('mgcrea.ngStrap.modal', ['mgcrea.ngStrap.helpers.dimensions']).pr
         };
         // Protected methods
         $modal.$onKeyUp = function (evt) {
-          evt.which === 27 && $modal.hide();
+          if (evt.which === 27 && scope.$isShown) {
+            $modal.hide();
+            evt.stopPropagation();
+          }
         };
         // Private methods
         function hideOnBackdropClick(evt) {
@@ -2020,7 +2044,8 @@ angular.module('mgcrea.ngStrap.modal', ['mgcrea.ngStrap.helpers.dimensions']).pr
         element.on(attr.trigger || 'click', modal.toggle);
         // Garbage collection
         scope.$on('$destroy', function () {
-          modal.destroy();
+          if (modal)
+            modal.destroy();
           options = null;
           modal = null;
         });
@@ -2168,14 +2193,15 @@ angular.module('mgcrea.ngStrap.popover', ['mgcrea.ngStrap.tooltip']).provider('$
           if (!popover || !angular.isDefined(newValue))
             return;
           if (angular.isString(newValue))
-            newValue = newValue.match(',?(popover),?');
+            newValue = !!newValue.match(',?(popover),?');
           newValue === true ? popover.show() : popover.hide();
         });
         // Initialize popover
         var popover = $popover(element, options);
         // Garbage collection
         scope.$on('$destroy', function () {
-          popover.destroy();
+          if (popover)
+            popover.destroy();
           options = null;
           popover = null;
         });
@@ -2380,8 +2406,10 @@ angular.module('mgcrea.ngStrap.scrollspy', [
         var scrollspy = $scrollspy(options);
         scrollspy.trackElement(options.target, element);
         scope.$on('$destroy', function () {
-          scrollspy.untrackElement(options.target, element);
-          scrollspy.destroy();
+          if (scrollspy) {
+            scrollspy.untrackElement(options.target, element);
+            scrollspy.destroy();
+          }
           options = null;
           scrollspy = null;
         });
@@ -2691,7 +2719,8 @@ angular.module('mgcrea.ngStrap.select', [
         };
         // Garbage collection
         scope.$on('$destroy', function () {
-          select.destroy();
+          if (select)
+            select.destroy();
           options = null;
           select = null;
         });
@@ -2701,18 +2730,38 @@ angular.module('mgcrea.ngStrap.select', [
 ]);
 
 // Source: tab.js
-angular.module('mgcrea.ngStrap.tab', []).run([
-  '$templateCache',
-  function ($templateCache) {
-    $templateCache.put('$pane', '{{pane.content}}');
-  }
-]).provider('$tab', function () {
+angular.module('mgcrea.ngStrap.tab', []).provider('$tab', function () {
   var defaults = this.defaults = {
       animation: 'am-fade',
-      template: 'tab/tab.tpl.html'
+      template: 'tab/tab.tpl.html',
+      baseClass: 'tabs'
+    };
+  var controller = this.controller = function ($scope, $element, $attrs) {
+      var self = this;
+      // Attributes options
+      self.$options = angular.copy(defaults);
+      angular.forEach(['animation'], function (key) {
+        if (angular.isDefined($attrs[key]))
+          self.$options[key] = $attrs[key];
+      });
+      self.$panes = $scope.$panes = [];
+      self.$viewChangeListeners = [];
+      self.$push = function (pane) {
+        self.$panes.push(pane);
+      };
+      self.$panes.$active = 0;
+      self.$setActive = $scope.$setActive = function (value) {
+        self.$panes.$active = value;
+        self.$viewChangeListeners.forEach(function (fn) {
+          fn();
+        });
+      };
     };
   this.$get = function () {
-    return { defaults: defaults };
+    var $tab = {};
+    $tab.defaults = defaults;
+    $tab.controller = controller;
+    return $tab;
   };
 }).directive('bsTabs', [
   '$window',
@@ -2721,43 +2770,66 @@ angular.module('mgcrea.ngStrap.tab', []).run([
   function ($window, $animate, $tab) {
     var defaults = $tab.defaults;
     return {
-      restrict: 'EAC',
+      require: [
+        '?ngModel',
+        'bsTabs'
+      ],
+      transclude: true,
       scope: true,
-      require: '?ngModel',
+      controller: $tab.controller,
       templateUrl: function (element, attr) {
         return attr.template || defaults.template;
       },
-      link: function postLink(scope, element, attr, controller) {
-        // Directive options
-        var options = defaults;
-        angular.forEach(['animation'], function (key) {
-          if (angular.isDefined(attr[key]))
-            options[key] = attr[key];
-        });
-        // Require scope as an object
-        attr.bsTabs && scope.$watch(attr.bsTabs, function (newValue, oldValue) {
-          scope.panes = newValue;
-        }, true);
+      link: function postLink(scope, element, attrs, controllers) {
+        var ngModelCtrl = controllers[0];
+        var bsTabsCtrl = controllers[1];
         // Add base class
-        element.addClass('tabs');
-        // Support animations
-        if (options.animation) {
-          element.addClass(options.animation);
+        element.addClass(defaults.baseClass);
+        if (ngModelCtrl) {
+          // Update the modelValue following
+          bsTabsCtrl.$viewChangeListeners.push(function () {
+            ngModelCtrl.$setViewValue(bsTabsCtrl.$panes.$active);
+          });
+          // modelValue -> $formatters -> viewValue
+          ngModelCtrl.$formatters.push(function (modelValue) {
+            // console.warn('$formatter("%s"): modelValue=%o (%o)', element.attr('ng-model'), modelValue, typeof modelValue);
+            bsTabsCtrl.$setActive(modelValue * 1);
+            return modelValue;
+          });
         }
-        scope.active = scope.activePane = 0;
-        // view -> model
-        scope.setActive = function (index, ev) {
-          scope.active = index;
-          if (controller) {
-            controller.$setViewValue(index);
-          }
-        };
-        // model -> view
-        if (controller) {
-          controller.$render = function () {
-            scope.active = controller.$modelValue * 1;
-          };
+      }
+    };
+  }
+]).directive('bsPane', [
+  '$window',
+  '$animate',
+  function ($window, $animate) {
+    return {
+      require: [
+        '^?ngModel',
+        '^bsTabs'
+      ],
+      scope: { title: '@' },
+      link: function postLink(scope, element, attrs, controllers) {
+        var ngModelCtrl = controllers[0];
+        var bsTabsCtrl = controllers[1];
+        // Add base class
+        element.addClass('tab-pane');
+        // Add animation class
+        if (bsTabsCtrl.$options.animation) {
+          element.addClass(bsTabsCtrl.$options.animation);
         }
+        // Push pane to parent bsTabs controller
+        bsTabsCtrl.$push(scope);
+        function render() {
+          var index = bsTabsCtrl.$panes.indexOf(scope);
+          var active = bsTabsCtrl.$panes.$active;
+          $animate[index === active ? 'addClass' : 'removeClass'](element, 'active');
+        }
+        bsTabsCtrl.$viewChangeListeners.push(function () {
+          render();
+        });
+        render();
       }
     };
   }
@@ -3140,7 +3212,7 @@ angular.module('mgcrea.ngStrap.timepicker', [
           if (!timepicker || !angular.isDefined(newValue))
             return;
           if (angular.isString(newValue))
-            newValue = newValue.match(',?(timepicker),?');
+            newValue = !!newValue.match(',?(timepicker),?');
           newValue === true ? timepicker.show() : timepicker.hide();
         });
         // Initialize timepicker
@@ -3228,7 +3300,8 @@ angular.module('mgcrea.ngStrap.timepicker', [
         };
         // Garbage collection
         scope.$on('$destroy', function () {
-          timepicker.destroy();
+          if (timepicker)
+            timepicker.destroy();
           options = null;
           timepicker = null;
         });
@@ -3362,7 +3435,7 @@ angular.module('mgcrea.ngStrap.tooltip', ['mgcrea.ngStrap.helpers.dimensions']).
           });
           // Options: target
           if (options.target) {
-            options.target = angular.isElement(options.target) ? options.target : findElement(options.target)[0];
+            options.target = angular.isElement(options.target) ? options.target : findElement(options.target);
           }
           // Options: show
           if (options.show) {
@@ -3505,10 +3578,16 @@ angular.module('mgcrea.ngStrap.tooltip', ['mgcrea.ngStrap.helpers.dimensions']).
           tipElement.css(tipPosition);
         };
         $tooltip.$onKeyUp = function (evt) {
-          evt.which === 27 && $tooltip.hide();
+          if (evt.which === 27 && $tooltip.$isShown) {
+            $tooltip.hide();
+            evt.stopPropagation();
+          }
         };
         $tooltip.$onFocusKeyUp = function (evt) {
-          evt.which === 27 && element[0].blur();
+          if (evt.which === 27) {
+            element[0].blur();
+            evt.stopPropagation();
+          }
         };
         $tooltip.$onFocusElementMouseDown = function (evt) {
           evt.preventDefault();
@@ -3649,7 +3728,7 @@ angular.module('mgcrea.ngStrap.tooltip', ['mgcrea.ngStrap.helpers.dimensions']).
           if (!tooltip || !angular.isDefined(newValue))
             return;
           if (angular.isString(newValue))
-            newValue = newValue.match(',?(tooltip),?');
+            newValue = !!newValue.match(',?(tooltip),?');
           newValue === true ? tooltip.show() : tooltip.hide();
         });
         // Initialize popover
@@ -3898,7 +3977,8 @@ angular.module('mgcrea.ngStrap.typeahead', [
         };
         // Garbage collection
         scope.$on('$destroy', function () {
-          typeahead.destroy();
+          if (typeahead)
+            typeahead.destroy();
           options = null;
           typeahead = null;
         });

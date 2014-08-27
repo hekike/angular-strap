@@ -1,6 +1,6 @@
 /**
  * angular-strap
- * @version v2.0.5 - 2014-08-07
+ * @version v2.0.5 - 2014-08-27
  * @link http://mgcrea.github.io/angular-strap
  * @author Olivier Louvignes (olivier@mg-crea.com)
  * @license MIT License, http://www.opensource.org/licenses/MIT
@@ -107,7 +107,8 @@ angular.module('mgcrea.ngStrap.alert', ['mgcrea.ngStrap.modal']).provider('$aler
         element.on(attr.trigger || 'click', alert.toggle);
         // Garbage collection
         scope.$on('$destroy', function () {
-          alert.destroy();
+          if (alert)
+            alert.destroy();
           options = null;
           alert = null;
         });
