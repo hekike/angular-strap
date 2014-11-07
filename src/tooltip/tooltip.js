@@ -330,7 +330,7 @@ angular.module('mgcrea.ngStrap.tooltip', ['mgcrea.ngStrap.helpers.dimensions'])
           var offset;
           var split = placement.split('-');
 
-          switch (split[0]) {
+          switch (split[1]) {
           case 'right':
             offset = {
               top: position.top + position.height / 2 - actualHeight / 2,
@@ -362,16 +362,16 @@ angular.module('mgcrea.ngStrap.tooltip', ['mgcrea.ngStrap.helpers.dimensions'])
           }
 
           // Add support for corners @todo css
-          if(split[0] === 'top' || split[0] === 'bottom') {
-            switch (split[1]) {
+          if(split[1] === 'top' || split[1] === 'bottom') {
+            switch (split[2]) {
             case 'left':
               offset.left = position.left;
               break;
             case 'right':
               offset.left =  position.left + position.width - actualWidth;
             }
-          } else if(split[0] === 'left' || split[0] === 'right') {
-            switch (split[1]) {
+          } else if(split[1] === 'left' || split[1] === 'right') {
+            switch (split[2]) {
             case 'top':
               offset.top = position.top - actualHeight;
               break;
