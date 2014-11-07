@@ -1,6 +1,6 @@
 /**
  * angular-strap
- * @version v2.0.5 - 2014-08-27
+ * @version v2.0.5 - 2014-11-07
  * @link http://mgcrea.github.io/angular-strap
  * @author Olivier Louvignes (olivier@mg-crea.com)
  * @license MIT License, http://www.opensource.org/licenses/MIT
@@ -295,7 +295,7 @@ angular.module('mgcrea.ngStrap.tooltip', ['mgcrea.ngStrap.helpers.dimensions']).
         function getCalculatedOffset(placement, position, actualWidth, actualHeight) {
           var offset;
           var split = placement.split('-');
-          switch (split[0]) {
+          switch (split[1]) {
           case 'right':
             offset = {
               top: position.top + position.height / 2 - actualHeight / 2,
@@ -325,16 +325,16 @@ angular.module('mgcrea.ngStrap.tooltip', ['mgcrea.ngStrap.helpers.dimensions']).
             return offset;
           }
           // Add support for corners @todo css
-          if (split[0] === 'top' || split[0] === 'bottom') {
-            switch (split[1]) {
+          if (split[1] === 'top' || split[1] === 'bottom') {
+            switch (split[2]) {
             case 'left':
               offset.left = position.left;
               break;
             case 'right':
               offset.left = position.left + position.width - actualWidth;
             }
-          } else if (split[0] === 'left' || split[0] === 'right') {
-            switch (split[1]) {
+          } else if (split[1] === 'left' || split[1] === 'right') {
+            switch (split[2]) {
             case 'top':
               offset.top = position.top - actualHeight;
               break;
